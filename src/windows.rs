@@ -56,6 +56,40 @@ pub fn get_mac(name: Option<&str>) -> Result<Option<[u8; 6]>, MacAddressError> {
     Ok(None)
 }
 
+pub fn get_all_macs() -> Result<Vec<[u8; 6]>, MacAddressError> {
+    let adapters = get_adapters()?;
+    let mut mac_addresses: Vec<[u8; 6]> = Vec::new();
+
+    // Safety: We don't use the pointer after `adapters` is dropped
+    let mut ptr = unsafe { adapters.ptr() };
+
+    loop {
+        // Break if we've gone through all devices
+        if ptr.is_null() {
+            break;
+        }
+
+        let bytes = unsafe { convert_mac_bytes(ptr) };
+
+        if bytes.iter().any(|&x| x != 0) {
+            mac_addresses.push(bytes);
+        }
+
+        // Otherwise go to the next device
+        #[cfg(target_pointer_width = "32")]
+        {
+            ptr = unsafe { ptr.read_unaligned().Next };
+        }
+
+        #[cfg(not(target_pointer_width = "32"))]
+        {
+            ptr = unsafe { (*ptr).Next };
+        }
+    }
+
+    Ok(mac_addresses)
+}
+
 pub fn get_ifname(mac: &[u8; 6]) -> Result<Option<String>, MacAddressError> {
     let adapters = get_adapters()?;
 

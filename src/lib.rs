@@ -112,6 +112,18 @@ pub fn get_mac_address() -> Result<Option<MacAddress>, MacAddressError> {
     Ok(bytes.map(|b| MacAddress { bytes: b }))
 }
 
+/// Calls the OS-specific function for retrieving MAC addresses of all
+/// network devices, ignoring local-loopback.
+pub fn get_mac_addresses() -> Result<Vec<MacAddress>, MacAddressError> {
+    let mac_vector = os::get_all_macs()?;
+    let mac_addresses: Vec<MacAddress> = mac_vector
+        .into_iter()
+        .map(|b| MacAddress { bytes: b })
+        .collect();
+
+    Ok(mac_addresses)
+}
+
 /// Attempts to look up the MAC address of an interface via the specified name.
 /// **NOTE**: On Windows, this uses the `FriendlyName` field of the adapter, which
 /// is the same name shown in the "Network Connections" Control Panel screen.
